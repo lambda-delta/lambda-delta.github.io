@@ -1,5 +1,12 @@
-开始Blog
-========
+---
+layout: post
+title: 开始Blog
+categories: 感想
+description: 开始Blog。
+keywords: Jekyll, Ruby
+---
+
+## 开始Blog
 
 工作这么久后，发现还是得随时记点东西，经常遇到需要重复查询同样的问题的解决方案（比如如何在ubuntu上安装搜狗拼音）。
 
