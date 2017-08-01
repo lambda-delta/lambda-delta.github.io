@@ -142,3 +142,191 @@ export HBASE_CLASSPATH=$HBASE_HOME/lib
 然后启动hbase：```$HBASE_HOME/bin/start-hbase.sh```，如果能正确运行$HBASE_HOME/bin/hbase shell - list，应该就算正确安装了。
 
 如果出现什么slf4j版本重复之类的warning，删掉$HBASE_HOME/lib/slf4j-log4j12-1.6.4.jar。
+
+最后可以写一个java程序测试一下，maven工程，相关代码如下：
+pom.xml:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>test-hbase</groupId>
+  <artifactId>test-cluster</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <hadoop-common.version>2.6.0</hadoop-common.version>
+    <hbase.version>0.98.8-hadoop2</hbase.version>
+    <junit.version>4.11</junit.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+      <optional>true</optional>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop-common.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <version>${hbase.version}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+</project>
+```
+
+test.Processor.java:
+```java
+package test;
+
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+
+public class Processor {
+  public static class Mapper extends TableMapper<ImmutableBytesWritable, Put>{
+    private static final Logger log = LoggerFactory.getLogger(Mapper.class);
+    @Override
+    protected void map(ImmutableBytesWritable key, Result value, Context context) throws IOException, InterruptedException {
+      log.info(Bytes.toString(key.get()));
+    }
+  }
+}
+```
+
+TestCluster.java:
+```java
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import test.Processor;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class TestCluster {
+  private static String TABLE_NAME = "table-name";
+  private static String FAMILY_1 = "f1";
+  private static String QUAL_1 = "q1";
+  private static String QUAL_2 = "q2";
+  private static String QUAL_3 = "q3";
+  private static Configuration config;
+  private static HBaseAdmin admin;
+  private static HTable table;
+
+  @BeforeClass
+  public static void setUpClass() throws Exception{
+    config = HBaseConfiguration.create();
+
+//    System.out.println(config.get("hbase.rootdir"));
+//    System.out.println(config.get("hbase.tmp.dir"));
+//    System.out.println(config.get("hbase.zookeeper.quorum"));
+//    System.out.println(config.get("hbase.master"));
+
+    config.set("hbase.zookeeper.property.clientPort", "2181");
+    config.set("hbase.zookeeper.quorum", "127.0.0.1");
+    config.set("hbase.master", "127.0.0.1:16000");
+
+//    config.set("hbase.rootdir", HBASE_ROOT_DIR);
+//    config.set("hbase.tmp.dir", HBASE_TMP_DIR);
+//    config.set("hbase.zookeeper.quorum", HBASE_IP);
+
+    admin = new HBaseAdmin(config);
+    createTable();
+
+    table = new HTable(config, TABLE_NAME);
+    genDatas(1000);
+  }
+
+  @AfterClass
+  public static void shutDownClass() throws Exception{
+  }
+
+  private static void deleteTable() throws Exception{
+    if (admin.isTableAvailable(TABLE_NAME)){
+      admin.deleteTable(TABLE_NAME);
+    }
+  }
+
+  private static void createTable() throws Exception{
+    if (admin.isTableAvailable(TABLE_NAME)){
+      return;
+    }
+    HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
+    desc.addFamily(new HColumnDescriptor(FAMILY_1));
+    admin.createTable(desc);
+  }
+
+  private static void genDatas(int count) throws Exception{
+    for (int i = 0; i < count; ++i){
+      Put put = new Put(("row" + i).getBytes());
+      put.add(FAMILY_1.getBytes(), QUAL_1.getBytes(), (QUAL_1 + ":" + i).getBytes());
+      put.add(FAMILY_1.getBytes(), QUAL_2.getBytes(), (QUAL_2 + ":" + i).getBytes());
+      put.add(FAMILY_1.getBytes(), QUAL_3.getBytes(), (QUAL_3 + ":" + i).getBytes());
+
+      boolean res = table.checkAndPut(put.getRow(), FAMILY_1.getBytes(), QUAL_1.getBytes(), null, put);
+      if (!res){
+        System.err.printf("put row failed(maybe already exsit): %s\n", Bytes.toString(put.getRow()));
+      }
+    }
+  }
+
+  private static Job createJob() throws Exception{
+    Job job = Job.getInstance(config, "test-job");
+    String tableName = TABLE_NAME;
+
+    Scan scan = new Scan();
+    scan.addFamily(FAMILY_1.getBytes());
+    scan.setCacheBlocks(false);
+    scan.setCaching(1000);;
+    scan.setMaxVersions();
+
+    TableMapReduceUtil.initTableMapperJob(tableName, scan,
+        Processor.Mapper.class, null,null, job);
+
+    job.setOutputFormatClass(NullOutputFormat.class);
+    job.setNumReduceTasks(0);
+
+    job.setJarByClass(Processor.class);
+
+    return job;
+  }
+
+  @Test
+  public void testMain() throws Exception{
+    System.out.println("hello world");
+  }
+
+  @Test
+  public void testMapReduce() throws Exception{
+    Job job = createJob();
+    Assert.assertTrue(job.waitForCompletion(true));
+  }
+}
+```
