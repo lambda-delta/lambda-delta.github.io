@@ -6,7 +6,7 @@ description: 64位Ubuntu 16.04 LTS 系统部署伪分布式HBase。
 keywords: HBase, Hadoop
 ---
 
-## 部署伪分布式HBase
+## 64位Ubuntu 16.04 LTS 系统部署伪分布式HBase
 
 花了很久在公司的linux系统上部署伪分布式hbase，总是会遇到各种各样的bug。系统是64位的ubuntu 16.04 LTS，可能之前装的版本比较低导致各种bug，目前使用的是hadoop-2.6.0，hbase-0.98.8，JDK 1.6.0_35，主要参考的是[HBase - Installation](https://www.tutorialspoint.com/hbase/hbase_installation.htm)，但还需要自己改改东西。
 
