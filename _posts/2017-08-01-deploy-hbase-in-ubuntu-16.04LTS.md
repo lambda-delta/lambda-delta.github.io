@@ -1,8 +1,8 @@
 ---
 layout: post
-title: 部署伪分布式HBase
+title: 64位Ubuntu 16.04 LTS 系统部署伪分布式HBase
 categories: HBase
-description: 部署伪分布式HBase。
+description: 64位Ubuntu 16.04 LTS 系统部署伪分布式HBase。
 keywords: HBase, Hadoop
 ---
 
