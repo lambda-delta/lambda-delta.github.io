@@ -144,6 +144,7 @@ export HBASE_CLASSPATH=$HBASE_HOME/lib
 如果出现什么slf4j版本重复之类的warning，删掉$HBASE_HOME/lib/slf4j-log4j12-1.6.4.jar。
 
 最后可以写一个java程序测试一下，maven工程，相关代码如下：
+
 pom.xml:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
