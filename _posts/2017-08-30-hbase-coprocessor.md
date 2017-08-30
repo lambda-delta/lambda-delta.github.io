@@ -269,7 +269,7 @@ hBaseAdmin.createTable(tableDesc);
 
 1. 编译协处理器相关代码，打包成jar
 2. 在hbase所运行的hdfs上，建立一个目录，专门存放协处理器，并修改相应的权限
-3. 把第一步中编译好的jar到第二步中的目录里
+3. 把第一步中编译好的jar放到第二步中的目录里，注意相关权限
 4. 进入hbase shell
 5. 关闭要操作的表```disable 'xxx_table'```
 6. 添加协处理器：```alter 'xxx_table', METHOD => 'table_att', 'Coprocessor'=>'hdfs:///your_path/xxx.jar|your.xxxProtocolImpl|1073741823'```，其中table_att为固定值不能改，jar包所在的hdfs路径根据实际情况自己改，类名要写全，最后一个数字是协处理器的优先级，随意写
